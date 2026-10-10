@@ -1,0 +1,13 @@
+[
+{"id":"a1","name":"Umbrella","company_handle":"umbrella","handle":"umbrellaprogram","url":"https://www.intigriti.com/programs/umbrella/umbrellaprogram/detail","status":"open","confidentiality_level":"public","min_bounty":{"value":50,"currency":"EUR"},"max_bounty":{"value":2000,"currency":"EUR"},"targets":{
+ "in_scope":[
+  {"type":"wildcard","endpoint":"*.umbrella.eu","description":"Main platform","impact":"Tier 1"},
+  {"type":"url","endpoint":"portal.umbrella.eu","description":null,"impact":"No Bounty"},
+  {"type":"iprange","endpoint":"151.101.0.0/22","description":null,"impact":"Tier 2"},
+  {"type":"android","endpoint":"eu.umbrella.app","description":null,"impact":"Tier 2"},
+  {"type":"other","endpoint":"All other digital assets owned by Umbrella","description":null,"impact":"Tier 3"}
+ ],
+ "out_of_scope":[{"type":"wildcard","endpoint":"*.shop.umbrella.eu","description":null,"impact":"Out of scope"}]}},
+{"id":"a2","name":"Private one","company_handle":"hidden","handle":"secret","url":"https://www.intigriti.com/programs/hidden/secret/detail","status":"open","confidentiality_level":"application","max_bounty":{"value":100,"currency":"EUR"},"targets":{"in_scope":[],"out_of_scope":[]}},
+{"id":"a3","name":"Closed","company_handle":"old","handle":"gone","url":"https://www.intigriti.com/programs/old/gone/detail","status":"suspended","confidentiality_level":"public","max_bounty":{"value":0,"currency":"EUR"},"targets":{"in_scope":[],"out_of_scope":[]}}
+]

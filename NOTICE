@@ -20,6 +20,14 @@ security.txt files (RFC 9116)
   record's provenance names the file. The policies those files link to
   belong to their publishers and are not copied into the bundles.
 
+arkadiyt/bounty-targets-data (https://github.com/arkadiyt/bounty-targets-data)
+projectdiscovery/public-bugbounty-programs (https://github.com/projectdiscovery/public-bugbounty-programs)
+  Public aggregate datasets of bug-bounty program listings, both MIT licensed
+  as repositories. The listings come from the platforms they name and remain
+  subject to those platforms' terms: records of a platform are published in
+  the signed feed only when the publish policy (policy/platforms.json) allows
+  it, with the attribution text recorded there. Removal requests: TAKEDOWN.md.
+
 Program names, policies and terms remain the property of the organisations
 that publish them. Listing a program in the feed does not imply that the
 organisation endorses OpenCTEM, nor that any testing is authorised.
