@@ -8,7 +8,9 @@
   {"asset_identifier":"10.0.0.0/8","asset_type":"CIDR","eligible_for_bounty":true,"instruction":"","max_severity":"high"},
   {"asset_identifier":"co.uk","asset_type":"URL","eligible_for_bounty":true,"instruction":"","max_severity":"high"},
   {"asset_identifier":"com.acme.app","asset_type":"GOOGLE_PLAY_APP_ID","eligible_for_bounty":true,"instruction":"","max_severity":"high"},
-  {"asset_identifier":"https://github.com/acme/tool","asset_type":"SOURCE_CODE","eligible_for_bounty":true,"instruction":"","max_severity":"critical"}
+  {"asset_identifier":"https://github.com/acme/tool","asset_type":"SOURCE_CODE","eligible_for_bounty":true,"instruction":"","max_severity":"critical"},
+  {"asset_identifier":"https://api.acme.io/graphql","asset_type":"API","eligible_for_bounty":true,"instruction":"Use the sandbox account","max_severity":"high"},
+  {"asset_identifier":"0x00000000000000000000000000000000000acme1","asset_type":"SMART_CONTRACT","eligible_for_bounty":true,"instruction":"","max_severity":"critical"}
  ],
  "out_of_scope":[{"asset_identifier":"blog.acme.io","asset_type":"URL","eligible_for_bounty":false,"instruction":"","max_severity":null}]}},
 {"handle":"quiet","id":2,"name":"Quiet VDP","offers_bounties":false,"submission_state":"paused","url":"https://hackerone.com/quiet","targets":{"in_scope":[],"out_of_scope":[]}},

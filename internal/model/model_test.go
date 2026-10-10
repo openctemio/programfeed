@@ -237,3 +237,35 @@ func TestDatasetProvenance(t *testing.T) {
 		}
 	}
 }
+
+func TestTargetOptionalFields(t *testing.T) {
+	good := Target{Type: TargetURL, Value: "https://a.openctem.io/v1", Confidence: ConfidencePublishedByPlatform, AssetType: AssetAPI,
+		Ports: []string{"443", "8000-8100"}, Protocol: "tcp", PathPrefix: "/v1", Environment: EnvStaging, Instructions: "x", Requires: "header X-Test"}
+	if err := good.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	for name, mut := range map[string]func(*Target){
+		"asset":    func(x *Target) { x.AssetType = "gadget" },
+		"env":      func(x *Target) { x.Environment = "prod" },
+		"protocol": func(x *Target) { x.Protocol = "icmp" },
+		"port":     func(x *Target) { x.Ports = []string{"0"} },
+		"range":    func(x *Target) { x.Ports = []string{"9000-80"} },
+		"high":     func(x *Target) { x.Ports = []string{"70000"} },
+		"path":     func(x *Target) { x.PathPrefix = "v1" },
+		"long":     func(x *Target) { x.Instructions = strings.Repeat("a", MaxInstructionsLen+1) },
+	} {
+		bad := good
+		mut(&bad)
+		if bad.Validate() == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+	// Normalize drops what is outside the grammar instead of guessing.
+	p := Program{InScope: []Target{{Type: TargetDomain, Value: "a.openctem.io", AssetType: "gadget", Protocol: "icmp",
+		Ports: []string{"80", "x", "80", "443"}, PathPrefix: "/p", Environment: "prod"}}}
+	Normalize(&p)
+	g := p.InScope[0]
+	if g.AssetType != "" || g.Protocol != "" || g.Environment != "" || g.PathPrefix != "" || strings.Join(g.Ports, ",") != "443,80" {
+		t.Errorf("normalised: %+v", g)
+	}
+}

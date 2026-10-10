@@ -39,6 +39,7 @@ func Normalize(p *Program) {
 				t.MaxSev = ""
 			}
 			t.Notes = CleanText(t.Notes, 500)
+			t = cleanTargetExtras(t)
 			out = append(out, t)
 		}
 		out = SortTargets(out)
@@ -100,4 +101,35 @@ func cleanList(in []string) []string {
 		}
 	}
 	return out
+}
+
+// cleanTargetExtras cleans the optional target fields: text is folded and
+// cut, anything outside its enum or grammar is dropped (never guessed).
+func cleanTargetExtras(t Target) Target {
+	t.Instructions = CleanText(t.Instructions, MaxInstructionsLen)
+	t.Requires = CleanText(t.Requires, MaxRequiresLen)
+	if !assetTypes[t.AssetType] {
+		t.AssetType = ""
+	}
+	if !environments[t.Environment] {
+		t.Environment = ""
+	}
+	if t.Protocol != "tcp" && t.Protocol != "udp" {
+		t.Protocol = ""
+	}
+	if t.Type != TargetURL || !strings.HasPrefix(t.PathPrefix, "/") || len(t.PathPrefix) > MaxPathPrefixLen ||
+		!safeText(t.PathPrefix, MaxPathPrefixLen) || strings.ContainsAny(t.PathPrefix, " ?#") {
+		t.PathPrefix = ""
+	}
+	var ports []string
+	seen := map[string]bool{}
+	for _, p := range t.Ports {
+		if ValidPort(p) && !seen[p] && len(ports) < MaxPorts {
+			seen[p] = true
+			ports = append(ports, p)
+		}
+	}
+	sort.Strings(ports)
+	t.Ports = ports
+	return t
 }
