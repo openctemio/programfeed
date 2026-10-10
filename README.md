@@ -119,6 +119,18 @@ rebuilt from scratch every time (`--prev` is refused).
 | `snapshot-changes.jsonl.gz` | the change log of this run |
 | `delta.manifest.dsse.json`, `delta-programs.jsonl.gz`, `delta-changes.jsonl.gz` | the programs that changed since the previous sequence (complete new records) and the same change log |
 | `keyset.dsse.json` | the key set the manifests are signed under |
+| `latest.v2.dsse.json` | bundle v2: signed pointer that pins the digest of each v2 manifest |
+| `snapshot.v2.manifest.dsse.json`, `delta.v2.manifest.dsse.json` | bundle v2: signed manifests listing, per record stream (`programs`, `changes`), the chunks with SHA-256, sizes, record counts and first and last record id |
+| `sha256-<hex>.jsonl.gz` | bundle v2 chunks: gzip JSON Lines of the same records as v1, named by their digest |
+
+Bundle v2 (OpenCTEM RFC-070) carries the same records as v1 in chunks of
+about 2,000 records, split by record id: the same programs always give the
+same chunks, and a changed program changes one chunk, so a consumer fetches
+only the chunks it does not have. It is signed with the same keys and key
+set as v1. v1 stays in every release for one release cycle and is then
+removed; read v2 with the `pkg/transfer/bundle` consumer of the OpenCTEM
+SDK. A local-only build writes `snapshot.v2.manifest.json` (unsigned,
+`local_only` in its meta) next to the v1 files and no pointer.
 
 A platform reads
 `https://github.com/openctemio/programfeed/releases/latest/download/latest.dsse.json`
@@ -196,7 +208,7 @@ characters. Each list is capped at 2,000 entries.
 ```sh
 go build -o programfeed ./cmd/programfeed
 gh release download --repo openctemio/programfeed --dir bundle
-./programfeed verify --dir bundle --root-key-id "$(cat keys/root-keyid.txt)"
+./programfeed verify --dir bundle --root-key-id "$(cat keys/root-keyid.txt)"   # v1, and v2 when present
 ```
 
 The envelopes, key set, sequence, expiry and caps follow the same
