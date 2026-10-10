@@ -92,7 +92,30 @@ func TestBountyTargets(t *testing.T) {
 		got[tg.Value] = tg.Type
 	}
 	want := map[string]string{"*.acmecorp.net": "wildcard", "api.acme.io": "domain", "https://app.acme.io/v1": "url",
-		"151.101.8.0/24": "cidr", "com.acme.app": "mobile_app", "https://github.com/acme/tool": "source_repo"}
+		"151.101.8.0/24": "cidr", "com.acme.app": "mobile_app", "https://github.com/acme/tool": "source_repo",
+		"https://api.acme.io/graphql": "url", "0x00000000000000000000000000000000000acme1": "other"}
+	assets := map[string]string{"*.acmecorp.net": "wildcard", "api.acme.io": "url", "https://app.acme.io/v1": "url", "151.101.8.0/24": "cidr",
+		"com.acme.app": "android_app", "https://github.com/acme/tool": "source_code", "https://api.acme.io/graphql": "api",
+		"0x00000000000000000000000000000000000acme1": "smart_contract"}
+	for _, tg := range acme.InScope {
+		if tg.AssetType != assets[tg.Value] {
+			t.Errorf("%s: asset_type %q, want %q", tg.Value, tg.AssetType, assets[tg.Value])
+		}
+		switch tg.Value {
+		case "https://app.acme.io/v1":
+			if tg.PathPrefix != "/v1" {
+				t.Errorf("path_prefix %q", tg.PathPrefix)
+			}
+		case "api.acme.io":
+			if tg.Instructions != "Rate limit 5 req/s" || tg.Notes != "" || tg.PathPrefix != "" {
+				t.Errorf("instructions/notes: %+v", tg)
+			}
+		}
+		// The datasets publish none of these: they stay empty, never guessed.
+		if len(tg.Ports) > 0 || tg.Protocol != "" || tg.Environment != "" || tg.Requires != "" {
+			t.Errorf("%s: unexpected optional fields %+v", tg.Value, tg)
+		}
+	}
 	if len(got) != len(want) {
 		t.Errorf("in scope %v", got)
 	}

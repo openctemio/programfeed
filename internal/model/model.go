@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -64,6 +65,42 @@ const (
 	TargetOther      = "other"
 )
 
+// Asset types: the normalised kind of asset a platform lists, finer than
+// Type (which stays coarse so older readers keep working). An absent
+// asset_type means the source did not say.
+const (
+	AssetDomain        = "domain"
+	AssetWildcard      = "wildcard"
+	AssetURL           = "url"
+	AssetAPI           = "api"
+	AssetIP            = "ip"
+	AssetCIDR          = "cidr"
+	AssetAndroidApp    = "android_app" // store id or APK
+	AssetIOSApp        = "ios_app"     // store id, TestFlight or IPA
+	AssetMobileApp     = "mobile_app"  // platform not stated
+	AssetSourceCode    = "source_code"
+	AssetExecutable    = "executable"
+	AssetHardware      = "hardware"
+	AssetSmartContract = "smart_contract"
+	AssetAIModel       = "ai_model"
+	AssetOther         = "other"
+)
+
+// Target environments and protocols.
+const (
+	EnvProduction = "production"
+	EnvStaging    = "staging"
+	EnvOther      = "other"
+)
+
+// Limits of the optional target fields.
+const (
+	MaxInstructionsLen = 1000
+	MaxRequiresLen     = 500
+	MaxPathPrefixLen   = 256
+	MaxPorts           = 32
+)
+
 // Target confidence: published = the program's own structured scope;
 // inferred = derived by the collector (for example the host a program's
 // security.txt was served from). An inferred target is a suggestion, never
@@ -86,7 +123,12 @@ var (
 	harbours   = map[string]bool{SafeHarbourFull: true, SafeHarbourPartial: true, SafeHarbourNone: true, SafeHarbourUnknown: true}
 	targetType = map[string]bool{TargetDomain: true, TargetWildcard: true, TargetIP: true, TargetCIDR: true, TargetURL: true,
 		TargetMobileApp: true, TargetSourceRepo: true, TargetOther: true}
-	confidences = map[string]bool{ConfidencePublished: true, ConfidenceInferred: true, ConfidencePublishedByPlatform: true}
+	assetTypes = map[string]bool{AssetDomain: true, AssetWildcard: true, AssetURL: true, AssetAPI: true, AssetIP: true,
+		AssetCIDR: true, AssetAndroidApp: true, AssetIOSApp: true, AssetMobileApp: true, AssetSourceCode: true,
+		AssetExecutable: true, AssetHardware: true, AssetSmartContract: true, AssetAIModel: true, AssetOther: true}
+	environments = map[string]bool{EnvProduction: true, EnvStaging: true, EnvOther: true}
+	portRE       = regexp.MustCompile(`^[0-9]{1,5}(-[0-9]{1,5})?$`)
+	confidences  = map[string]bool{ConfidencePublished: true, ConfidenceInferred: true, ConfidencePublishedByPlatform: true}
 )
 
 // Program is one public bug-bounty or vulnerability-disclosure program.
@@ -120,7 +162,31 @@ type Target struct {
 	Confidence string `json:"confidence"`
 	Eligible   *bool  `json:"eligible_for_bounty,omitempty"`
 	MaxSev     string `json:"max_severity,omitempty"`
-	Notes      string `json:"notes,omitempty"`
+	Notes      string `json:"notes,omitempty"` // the collector's remark (for example why a target is inferred)
+
+	// Optional, only when the platform published them (an absent field is
+	// unknown, never a guess).
+	AssetType    string   `json:"asset_type,omitempty"`
+	Ports        []string `json:"ports,omitempty"` // "443" or "8000-8100"
+	Protocol     string   `json:"protocol,omitempty"`
+	PathPrefix   string   `json:"path_prefix,omitempty"` // url targets: the path the scope is limited to
+	Environment  string   `json:"environment,omitempty"`
+	Instructions string   `json:"instructions,omitempty"` // the platform's testing instructions for this asset
+	Requires     string   `json:"requires,omitempty"`     // headers, test accounts or other prerequisites
+}
+
+// ValidPort reports whether s is a port ("443") or a port range ("8000-8100").
+func ValidPort(s string) bool {
+	if !portRE.MatchString(s) {
+		return false
+	}
+	lo, hi := s, s
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		lo, hi = s[:i], s[i+1:]
+	}
+	a, _ := strconv.Atoi(lo)
+	b, _ := strconv.Atoi(hi)
+	return a >= 1 && b <= 65535 && a <= b
 }
 
 // Rejected is a target the scope rules refused, with the reason.
@@ -312,6 +378,17 @@ func (r Rules) validate() error {
 func (t Target) Validate() error {
 	if !targetType[t.Type] || !confidences[t.Confidence] || !severities[t.MaxSev] || !safeText(t.Notes, 500) {
 		return fmt.Errorf("target %q: type, confidence, max_severity or notes", t.Value)
+	}
+	if (t.AssetType != "" && !assetTypes[t.AssetType]) || (t.Environment != "" && !environments[t.Environment]) ||
+		(t.Protocol != "" && t.Protocol != "tcp" && t.Protocol != "udp") ||
+		!safeText(t.Instructions, MaxInstructionsLen) || !safeText(t.Requires, MaxRequiresLen) || len(t.Ports) > MaxPorts ||
+		(t.PathPrefix != "" && (t.Type != TargetURL || !strings.HasPrefix(t.PathPrefix, "/") || !safeText(t.PathPrefix, MaxPathPrefixLen) || strings.ContainsAny(t.PathPrefix, " ?#"))) {
+		return fmt.Errorf("target %q: asset_type, environment, protocol, ports, path_prefix, instructions or requires", t.Value)
+	}
+	for _, p := range t.Ports {
+		if !ValidPort(p) {
+			return fmt.Errorf("target %q: port %q", t.Value, p)
+		}
 	}
 	n, reason := NormalizeTarget(t.Type, t.Value)
 	if reason != "" || n != t.Value {

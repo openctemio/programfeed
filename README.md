@@ -154,6 +154,22 @@ Key rules:
 - Scope entries are typed (`domain`, `wildcard`, `ip`, `cidr`, `url`,
   `mobile_app`, `source_repo`, `other`), canonical, sorted and deduplicated;
   out of scope wins over in scope.
+- Schema 1.1 (additive; `openctem.programfeed/v1` is unchanged, every new
+  field is optional and omitted when the platform did not publish it, never
+  guessed). A scope entry may carry `asset_type` (the platform's own asset
+  type, normalised: `domain`, `wildcard`, `url`, `api`, `ip`, `cidr`,
+  `android_app`, `ios_app`, `mobile_app`, `source_code`, `executable`,
+  `hardware`, `smart_contract`, `ai_model`, `other`; `type` stays the coarse
+  kind), `ports` (ports or ranges such as `8000-8100`), `protocol`
+  (`tcp`/`udp`), `path_prefix` (url targets), `environment`
+  (`production`/`staging`/`other`), `instructions` (the platform's testing
+  text, at most 1000 bytes), `requires` (headers, test accounts), alongside
+  `eligible_for_bounty` and `max_severity`. The aggregate datasets currently
+  publish `asset_type`, `instructions`, eligibility and severity (and the
+  URL path becomes `path_prefix`); the other fields are in the schema for
+  sources that publish them. `notes` is now only the collector's own remark.
+  Readers that validate with `additionalProperties: false` must adopt the
+  1.1 schema.
 - `confidence`: `published` (the program's own scope), `published_by_platform`
   (scope the hosting platform published, read through a public dataset; the
   record's `provenance` names the dataset, commit, original platform and

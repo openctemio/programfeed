@@ -91,7 +91,10 @@ type dsTarget struct {
 	value    string
 	eligible *bool
 	maxSev   string
-	notes    string
+	// asset is the platform's own asset type mapped to the normalised enum
+	// ("" = not stated; the classified type then decides).
+	asset        string
+	instructions string
 }
 
 // Collect implements Source. Any platform file that cannot be read fails
@@ -167,10 +170,35 @@ func targets(in []dsTarget) []model.Target {
 	out := make([]model.Target, 0, len(in))
 	for _, t := range in {
 		typ, val := classify(t.kind, t.value)
+		asset := t.asset
+		if asset == "" {
+			asset = assetOfType[typ]
+		}
 		out = append(out, model.Target{Type: typ, Value: val, Confidence: model.ConfidencePublishedByPlatform,
-			Eligible: t.eligible, MaxSev: strings.ToLower(t.maxSev), Notes: t.notes})
+			Eligible: t.eligible, MaxSev: strings.ToLower(t.maxSev), AssetType: asset,
+			PathPrefix: pathPrefix(typ, val), Instructions: t.instructions})
 	}
 	return out
+}
+
+// assetOfType is the asset type implied by a classified target type when
+// the platform did not state one.
+var assetOfType = map[string]string{
+	model.TargetDomain: model.AssetDomain, model.TargetWildcard: model.AssetWildcard, model.TargetIP: model.AssetIP,
+	model.TargetCIDR: model.AssetCIDR, model.TargetURL: model.AssetURL, model.TargetMobileApp: model.AssetMobileApp,
+	model.TargetSourceRepo: model.AssetSourceCode, model.TargetOther: model.AssetOther,
+}
+
+// pathPrefix is the path a URL target is limited to; "" for a bare host.
+func pathPrefix(typ, val string) string {
+	if typ != model.TargetURL {
+		return ""
+	}
+	u, err := url.Parse(val)
+	if err != nil || u.Path == "" || u.Path == "/" {
+		return ""
+	}
+	return u.Path
 }
 
 // lastSegment is the last non-empty path segment of a URL.
@@ -223,12 +251,20 @@ func (t h1Target) target() dsTarget {
 	switch t.Type {
 	case "SOURCE_CODE":
 		kind = kindSource
-	case "GOOGLE_PLAY_APP_ID", "APPLE_STORE_APP_ID", "TESTFLIGHT", "OTHER_APK", "WINDOWS_APP_STORE_APP_ID":
+	case "GOOGLE_PLAY_APP_ID", "APPLE_STORE_APP_ID", "TESTFLIGHT", "OTHER_APK", "OTHER_IPA", "WINDOWS_APP_STORE_APP_ID":
 		kind = kindMobile
 	case "HARDWARE", "DOWNLOADABLE_EXECUTABLES", "AI_MODEL", "SMART_CONTRACT":
 		kind = kindOpaque
 	}
-	return dsTarget{kind: kind, value: t.Identifier, eligible: t.Eligible, maxSev: t.MaxSeverity, notes: t.Instruction}
+	asset := map[string]string{
+		"URL": model.AssetURL, "WILDCARD": model.AssetWildcard, "CIDR": model.AssetCIDR, "IP_ADDRESS": model.AssetIP,
+		"API": model.AssetAPI, "SOURCE_CODE": model.AssetSourceCode, "DOWNLOADABLE_EXECUTABLES": model.AssetExecutable,
+		"HARDWARE": model.AssetHardware, "SMART_CONTRACT": model.AssetSmartContract, "AI_MODEL": model.AssetAIModel,
+		"GOOGLE_PLAY_APP_ID": model.AssetAndroidApp, "OTHER_APK": model.AssetAndroidApp,
+		"APPLE_STORE_APP_ID": model.AssetIOSApp, "TESTFLIGHT": model.AssetIOSApp, "OTHER_IPA": model.AssetIOSApp,
+		"WINDOWS_APP_STORE_APP_ID": model.AssetMobileApp, "OTHER": model.AssetOther,
+	}[t.Type]
+	return dsTarget{kind: kind, value: t.Identifier, eligible: t.Eligible, maxSev: t.MaxSeverity, asset: asset, instructions: t.Instruction}
 }
 
 // ---- Bugcrowd ----
@@ -272,11 +308,15 @@ func (t bcTarget) target() dsTarget {
 	case "hardware", "iot":
 		kind = kindOpaque
 	}
+	asset := map[string]string{
+		"website": model.AssetURL, "api": model.AssetAPI, "ios": model.AssetIOSApp, "android": model.AssetAndroidApp,
+		"hardware": model.AssetHardware, "iot": model.AssetHardware, "ip_address": model.AssetIP, "other": model.AssetOther,
+	}[t.Type] // "network" and anything new: the classified type decides
 	v := t.Target
 	if v == "" {
 		v = t.Name
 	}
-	return dsTarget{kind: kind, value: v}
+	return dsTarget{kind: kind, value: v, asset: asset}
 }
 
 // ---- Intigriti ----
@@ -326,7 +366,11 @@ func (t intTarget) target() dsTarget {
 	case "device":
 		kind = kindOpaque
 	}
-	out := dsTarget{kind: kind, value: t.Endpoint, notes: t.Description}
+	asset := map[string]string{
+		"url": model.AssetURL, "wildcard": model.AssetWildcard, "iprange": model.AssetCIDR, "ios": model.AssetIOSApp,
+		"android": model.AssetAndroidApp, "device": model.AssetHardware, "other": model.AssetOther,
+	}[t.Type]
+	out := dsTarget{kind: kind, value: t.Endpoint, asset: asset, instructions: t.Description}
 	if strings.EqualFold(strings.TrimSpace(t.Impact), "No Bounty") {
 		no := false
 		out.eligible = &no
@@ -375,5 +419,10 @@ func (t ywhTarget) target() dsTarget {
 	case t.Type == "ai-model" || t.Type == "challenge":
 		kind = kindOpaque
 	}
-	return dsTarget{kind: kind, value: t.Target}
+	asset := map[string]string{
+		"web-application": model.AssetURL, "api": model.AssetAPI, "wildcard": model.AssetWildcard,
+		"mobile-application-ios": model.AssetIOSApp, "mobile-application-android": model.AssetAndroidApp,
+		"mobile-application": model.AssetMobileApp, "ai-model": model.AssetAIModel, "other": model.AssetOther,
+	}[t.Type] // "application", "challenge" and anything new: the classified type decides
+	return dsTarget{kind: kind, value: t.Target, asset: asset}
 }
