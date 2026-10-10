@@ -58,7 +58,7 @@ func (d PDBounty) Collect(ctx context.Context, c *fetch.Client) (*Result, error)
 		return nil, err
 	}
 	fileURL := d.Dataset.rawURL(commit, pdFile)
-	resp, err := c.Get(ctx, fileURL, maxDatasetBytes)
+	resp, err := c.Get(fetch.WithDeadline(ctx, datasetDeadline), fileURL, maxDatasetBytes)
 	if err != nil {
 		return nil, err
 	}

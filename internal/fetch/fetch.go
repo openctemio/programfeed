@@ -49,7 +49,10 @@ type Options struct {
 	UserAgent   string
 	CacheDir    string        // conditional requests; empty disables the cache
 	MinInterval time.Duration // between two requests to one host
-	Timeout     time.Duration // per request
+	Timeout     time.Duration // response-header timeout, and the default whole-request deadline
+	// IdleTimeout fails a response body that delivers no byte for this long
+	// (default 20s), so a large download may take long but never stalls.
+	IdleTimeout time.Duration
 	// AllowPrivate lets tests talk to httptest servers on loopback. Never
 	// set in the collector.
 	AllowPrivate bool
@@ -84,6 +87,9 @@ func New(opt Options) *Client {
 	if opt.Timeout == 0 {
 		opt.Timeout = 30 * time.Second
 	}
+	if opt.IdleTimeout == 0 {
+		opt.IdleTimeout = 20 * time.Second
+	}
 	c := &Client{opt: opt, next: map[string]time.Time{}, robots: map[string]*robotsRules{}}
 	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: func(_, address string, _ syscall.RawConn) error {
 		if opt.AllowPrivate {
@@ -109,7 +115,7 @@ func New(opt Options) *Client {
 		MaxIdleConnsPerHost:   2,
 		IdleConnTimeout:       30 * time.Second,
 	}
-	c.http = &http.Client{Transport: transport, Timeout: opt.Timeout,
+	c.http = &http.Client{Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 3 {
 				return errors.New("more than 3 redirects")
@@ -127,6 +133,30 @@ func New(opt Options) *Client {
 			return c.wait(req.Context(), req.URL.Host)
 		}}
 	return c
+}
+
+type deadlineKey struct{}
+
+// WithDeadline raises (or lowers) the whole-request deadline of fetches made
+// with the returned context, for sources that download large files. The
+// header, connect and idle-body timeouts still apply.
+func WithDeadline(ctx context.Context, d time.Duration) context.Context {
+	return context.WithValue(ctx, deadlineKey{}, d)
+}
+
+// idleReader resets the idle timer whenever bytes arrive.
+type idleReader struct {
+	r     io.Reader
+	timer *time.Timer
+	idle  time.Duration
+}
+
+func (i *idleReader) Read(p []byte) (int, error) {
+	n, err := i.r.Read(p)
+	if n > 0 {
+		i.timer.Reset(i.idle)
+	}
+	return n, err
 }
 
 // Get fetches rawURL (at most maxBytes) after checking robots.txt.
@@ -164,6 +194,16 @@ func (c *Client) get(ctx context.Context, u *url.URL, maxBytes int64, useCache b
 	if err := c.wait(ctx, u.Host); err != nil {
 		return nil, err
 	}
+	total := c.opt.Timeout
+	if d, ok := ctx.Value(deadlineKey{}).(time.Duration); ok && d > 0 {
+		total = d
+	}
+	ctx, cancelTotal := context.WithTimeout(ctx, total)
+	defer cancelTotal()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	idle := time.AfterFunc(c.opt.IdleTimeout, cancel) // a stalled body fails
+	defer idle.Stop()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -203,7 +243,7 @@ func (c *Client) get(ctx context.Context, u *url.URL, maxBytes int64, useCache b
 	case resp.StatusCode != http.StatusOK:
 		return nil, &StatusError{URL: u.String(), Code: resp.StatusCode}
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	body, err := io.ReadAll(io.LimitReader(&idleReader{r: resp.Body, timer: idle, idle: c.opt.IdleTimeout}, maxBytes+1))
 	if err != nil {
 		return nil, err
 	}
