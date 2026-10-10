@@ -1,0 +1,3 @@
+# Extra domains whose security.txt the securitytxt adapter reads, one per line,
+# optionally followed by the organisation name. Only add domains whose owner
+# publishes a vulnerability disclosure policy for public use.

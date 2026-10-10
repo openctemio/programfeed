@@ -1,0 +1,13 @@
+[
+{"name":"Globex Bug Bounty","url":"https://bugcrowd.com/engagements/globex","allows_disclosure":true,"managed_by_bugcrowd":true,"safe_harbor":"full","max_payout":5000,"targets":{
+ "in_scope":[
+  {"type":"website","target":"https://www.globex.io","uri":"https://www.globex.io","name":"www","ipAddress":null},
+  {"type":"api","target":"api.globex.io","uri":"","name":"api","ipAddress":null},
+  {"type":"ios","target":"Globex iOS","uri":"","name":"Globex iOS","ipAddress":null},
+  {"type":"hardware","target":"Globex Router X1","uri":"","name":"Globex Router X1","ipAddress":null},
+  {"type":"ip_address","target":"151.101.1.7","uri":"","name":"x","ipAddress":null},
+  {"type":"ip_address","target":"10.1.2.3","uri":"","name":"x","ipAddress":null}
+ ],
+ "out_of_scope":[{"type":"website","target":"status.globex.io","uri":"","name":"status","ipAddress":null}]}},
+{"name":"Initech VDP","url":"https://bugcrowd.com/initech-vdp","allows_disclosure":false,"managed_by_bugcrowd":true,"safe_harbor":null,"max_payout":0,"targets":{"in_scope":[{"type":"website","target":"initech-corp.net","uri":"","name":"x","ipAddress":null}],"out_of_scope":[]}}
+]

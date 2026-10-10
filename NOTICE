@@ -1,0 +1,33 @@
+programfeed
+Copyright 2026 The OpenCTEM Authors
+
+This software is licensed under the Apache License, Version 2.0 (LICENSE).
+
+The bundles this software publishes contain data from third-party sources,
+under their own terms:
+
+disclose.io diodb (https://github.com/disclose/diodb)
+  Program directory data, dedicated to the public domain under CC0 1.0
+  Universal: https://github.com/disclose/diodb/blob/master/LICENSE
+
+CISA dotgov-data (https://github.com/cisagov/dotgov-data)
+  The list of US federal .gov domains used as the security.txt seed list,
+  dedicated to the public domain under CC0 1.0 Universal.
+
+security.txt files (RFC 9116)
+  Each program record from the securitytxt adapter is derived from the
+  security.txt file its domain publishes for automated retrieval; the
+  record's provenance names the file. The policies those files link to
+  belong to their publishers and are not copied into the bundles.
+
+arkadiyt/bounty-targets-data (https://github.com/arkadiyt/bounty-targets-data)
+projectdiscovery/public-bugbounty-programs (https://github.com/projectdiscovery/public-bugbounty-programs)
+  Public aggregate datasets of bug-bounty program listings, both MIT licensed
+  as repositories. The listings come from the platforms they name and remain
+  subject to those platforms' terms: records of a platform are published in
+  the signed feed only when the publish policy (policy/platforms.json) allows
+  it, with the attribution text recorded there. Removal requests: TAKEDOWN.md.
+
+Program names, policies and terms remain the property of the organisations
+that publish them. Listing a program in the feed does not imply that the
+organisation endorses OpenCTEM, nor that any testing is authorised.
