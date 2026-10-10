@@ -242,6 +242,12 @@ func cmdVerify(args []string) error {
 	if err != nil {
 		return err
 	}
+	if bundle.HasV2(*dir) {
+		if err := bundle.VerifyV2(*dir, v.KeySet, time.Now()); err != nil {
+			return err
+		}
+		logf("verified bundle v2 (sequence %d)", v.Latest.Sequence)
+	}
 	logf("verified sequence %d (snapshot %d programs, %d targets; key set v%d)", v.Latest.Sequence,
 		v.Snapshot.Stats.Programs, v.Snapshot.Stats.Targets, v.KeySet.Version)
 	return nil

@@ -278,6 +278,9 @@ func Write(dir string, prev, next *Snapshot, opt WriteOptions) (snap, delta *Man
 	if err := writeJSON(filepath.Join(dir, "latest.json"), latest); err != nil {
 		return nil, nil, nil, err
 	}
+	if err := WriteV2(dir, prev, next, snap, delta); err != nil {
+		return nil, nil, nil, err
+	}
 	return snap, delta, latest, nil
 }
 
@@ -409,6 +412,11 @@ func Sign(dir string, priv ed25519.PrivateKey, keyset []byte, pinnedRoot string,
 			return err
 		}
 		if err := os.Remove(filepath.Join(dir, p.in)); err != nil {
+			return err
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, unsignedSnapshotV2)); err == nil {
+		if err := signV2(dir, priv); err != nil {
 			return err
 		}
 	}
