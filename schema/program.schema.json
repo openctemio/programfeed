@@ -40,8 +40,8 @@
         "type": {"enum": ["domain", "wildcard", "ip", "cidr", "url", "mobile_app", "source_repo", "other"]},
         "value": {"type": "string", "maxLength": 512,
           "description": "Canonical form: domain = lower-case A-label, not a public suffix, not a reserved name; wildcard = \"*.\" + such a domain; ip = public unicast address; cidr = masked public prefix of at least /16 (IPv4) or /48 (IPv6); url = http(s) without credentials or fragment, host checked as above."},
-        "confidence": {"enum": ["published", "inferred"],
-          "description": "published: the program's own scope. inferred: derived by the collector (for example the host serving the program's security.txt); a suggestion, never an authorisation to test."},
+        "confidence": {"enum": ["published", "published_by_platform", "inferred"],
+          "description": "published: the program's own scope. published_by_platform: scope the hosting platform published for the program, read through a public aggregate dataset; it states what the program lists and is never permission to test.inferred: derived by the collector (for example the host serving the program's security.txt); a suggestion, never an authorisation to test."},
         "eligible_for_bounty": {"type": "boolean"},
         "max_severity": {"enum": ["none", "low", "medium", "high", "critical"]},
         "notes": {"type": "string", "maxLength": 500}
@@ -97,7 +97,11 @@
       "properties": {
         "source": {"type": "string"},
         "source_url": {"type": "string", "format": "uri", "maxLength": 2048},
-        "fetched_at": {"type": "string", "format": "date-time"}
+        "fetched_at": {"type": "string", "format": "date-time"},
+        "dataset": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,100}/[A-Za-z0-9._-]{1,100}$", "description": "Aggregate dataset repository the record was read through (owner/name)."},
+        "dataset_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "original_platform": {"type": "string", "maxLength": 64, "description": "The platform the dataset took the record from."},
+        "original_url": {"type": "string", "format": "uri", "maxLength": 2048, "description": "The program page on the original platform."}
       }
     }
   }

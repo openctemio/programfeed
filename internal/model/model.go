@@ -71,6 +71,10 @@ const (
 const (
 	ConfidencePublished = "published"
 	ConfidenceInferred  = "inferred"
+	// ConfidencePublishedByPlatform: scope the hosting platform published
+	// for the program, read through a public aggregate dataset. It states
+	// what the program lists; it is never permission to test.
+	ConfidencePublishedByPlatform = "published_by_platform"
 )
 
 var (
@@ -82,7 +86,7 @@ var (
 	harbours   = map[string]bool{SafeHarbourFull: true, SafeHarbourPartial: true, SafeHarbourNone: true, SafeHarbourUnknown: true}
 	targetType = map[string]bool{TargetDomain: true, TargetWildcard: true, TargetIP: true, TargetCIDR: true, TargetURL: true,
 		TargetMobileApp: true, TargetSourceRepo: true, TargetOther: true}
-	confidences = map[string]bool{ConfidencePublished: true, ConfidenceInferred: true}
+	confidences = map[string]bool{ConfidencePublished: true, ConfidenceInferred: true, ConfidencePublishedByPlatform: true}
 )
 
 // Program is one public bug-bounty or vulnerability-disclosure program.
@@ -157,6 +161,13 @@ type Provenance struct {
 	Source    string    `json:"source"`
 	SourceURL string    `json:"source_url"`
 	FetchedAt time.Time `json:"fetched_at"`
+	// Set for records read through an aggregate dataset: the dataset
+	// repository ("owner/name"), the commit the record was read at, and
+	// the platform and program page the dataset took it from.
+	Dataset          string `json:"dataset,omitempty"`
+	DatasetCommit    string `json:"dataset_commit,omitempty"`
+	OriginalPlatform string `json:"original_platform,omitempty"`
+	OriginalURL      string `json:"original_url,omitempty"`
 }
 
 // Validate checks a normalised program.
@@ -196,6 +207,9 @@ func (p *Program) Validate() error {
 	}
 	if err := checkURL(p.Terms.URL, true); err != nil {
 		return fail("terms url: %v", err)
+	}
+	if err := p.Provenance.validateDataset(); err != nil {
+		return fail("provenance: %v", err)
 	}
 	if p.Terms.SHA256 != "" && !sha256RE.MatchString(p.Terms.SHA256) {
 		return fail("terms sha256")
@@ -242,6 +256,31 @@ func (p *Program) Validate() error {
 		if (r.Scope != "in" && r.Scope != "out") || !safeText(r.Type, 32) || !safeText(r.Value, MaxValueLen) || !safeText(r.Reason, 200) || r.Reason == "" {
 			return fail("rejected entry %q", r.Value)
 		}
+	}
+	return nil
+}
+
+var (
+	datasetRE = regexp.MustCompile(`^[A-Za-z0-9._-]{1,100}/[A-Za-z0-9._-]{1,100}$`)
+	commitRE  = regexp.MustCompile(`^[0-9a-f]{40}$`)
+)
+
+// validateDataset checks the aggregate-dataset fields: they are set
+// together or not at all.
+func (v Provenance) validateDataset() error {
+	if v.Dataset == "" && v.DatasetCommit == "" && v.OriginalPlatform == "" && v.OriginalURL == "" {
+		return nil
+	}
+	switch {
+	case !datasetRE.MatchString(v.Dataset):
+		return errors.New("dataset must be owner/name")
+	case !commitRE.MatchString(v.DatasetCommit):
+		return errors.New("dataset_commit must be a 40-character commit id")
+	case v.OriginalPlatform == "" || !safeText(v.OriginalPlatform, 64):
+		return errors.New("original_platform")
+	}
+	if err := checkURL(v.OriginalURL, true); err != nil {
+		return fmt.Errorf("original_url: %v", err)
 	}
 	return nil
 }

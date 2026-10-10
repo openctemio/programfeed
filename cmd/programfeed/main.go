@@ -2,7 +2,7 @@
 // (public bug-bounty and vulnerability-disclosure programs), and manages
 // the signing keys.
 //
-//	programfeed build  --out DIR [--prev DIR] [--root-key-id ID] [--cache DIR] [--sources a,b] [--seed-file FILE] [--allow-mass-change]
+//	programfeed build  --out DIR [--prev DIR] [--root-key-id ID] [--cache DIR] [--sources a,b] [--policy FILE] [--local-only] [--seed-file FILE] [--allow-mass-change]
 //	programfeed sign   --dir DIR --keyset FILE --root-key-id ID     (key in $PROGRAMFEED_SIGNING_KEY)
 //	programfeed verify --dir DIR --root-key-id ID [--applied N] [--allow-expired]
 //	programfeed keys root-init --out FILE
@@ -28,6 +28,7 @@ import (
 	"github.com/openctemio/programfeed/internal/dsse"
 	"github.com/openctemio/programfeed/internal/fetch"
 	"github.com/openctemio/programfeed/internal/source"
+	"github.com/openctemio/programfeed/policy"
 )
 
 // version is set at build time (-ldflags "-X main.version=...").
@@ -62,7 +63,14 @@ func run(ctx context.Context, args []string) error {
 func logf(format string, args ...any) { fmt.Fprintf(os.Stderr, format+"\n", args...) }
 
 // sources returns the configured adapters, in order.
-func sources(names, seedFile string) ([]source.Source, error) {
+//
+// only limits the dataset adapters to platforms the publish policy allows
+// (nil = everything, for a local-only build); a dataset adapter with
+// nothing left to read is left out.
+func sources(names, seedFile string, only []string, localOnly bool) ([]source.Source, error) {
+	if localOnly {
+		only = nil
+	}
 	var out []source.Source
 	for _, n := range strings.Split(names, ",") {
 		switch strings.TrimSpace(n) {
@@ -78,6 +86,18 @@ func sources(names, seedFile string) ([]source.Source, error) {
 				st.Extra = source.ParseSeedFile(b)
 			}
 			out = append(out, st)
+		case "bounty-targets":
+			if b := source.NewBountyTargets(only); localOnly || len(intersect(only, source.BountyTargetsPlatforms())) > 0 {
+				out = append(out, b)
+			} else {
+				logf("bounty-targets: no platform may be published, not fetched")
+			}
+		case "pd-bounty":
+			if len(only) > 0 || localOnly {
+				out = append(out, source.NewPDBounty(only))
+			} else {
+				logf("pd-bounty: no platform may be published, not fetched")
+			}
 		case "":
 		default:
 			return nil, fmt.Errorf("unknown source %q", n)
@@ -89,6 +109,18 @@ func sources(names, seedFile string) ([]source.Source, error) {
 	return out, nil
 }
 
+func intersect(a, b []string) []string {
+	var out []string
+	for _, x := range a {
+		for _, y := range b {
+			if x == y {
+				out = append(out, x)
+			}
+		}
+	}
+	return out
+}
+
 func cmdBuild(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("build", flag.ContinueOnError)
 	out := fs.String("out", "", "output directory")
@@ -96,7 +128,9 @@ func cmdBuild(ctx context.Context, args []string) error {
 	root := fs.String("root-key-id", os.Getenv("PROGRAMFEED_ROOT_KEY_ID"), "pinned root key id")
 	mass := fs.Bool("allow-mass-change", false, "accept a source that suddenly lost more than half of its programs")
 	cache := fs.String("cache", "", "HTTP cache directory for conditional requests")
-	names := fs.String("sources", "diodb,securitytxt", "comma-separated adapters")
+	names := fs.String("sources", "diodb,securitytxt,bounty-targets,pd-bounty", "comma-separated adapters")
+	policyFile := fs.String("policy", "", "publish policy file (default: the compiled-in policy/platforms.json)")
+	localOnly := fs.Bool("local-only", false, "ignore the publish policy and write an UNSIGNED local bundle that must not be published")
 	seedFile := fs.String("seed-file", "seeds/securitytxt.txt", "extra security.txt seed domains (empty to skip)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -104,7 +138,20 @@ func cmdBuild(ctx context.Context, args []string) error {
 	if *out == "" {
 		return errors.New("build: --out is required")
 	}
-	srcs, err := sources(*names, *seedFile)
+	pol := policy.Default()
+	if *policyFile != "" {
+		b, err := os.ReadFile(*policyFile)
+		if err != nil {
+			return err
+		}
+		if pol, err = policy.Parse(b); err != nil {
+			return fmt.Errorf("policy: %w", err)
+		}
+	}
+	if *localOnly && *prevDir != "" {
+		return errors.New("build: a local-only bundle is rebuilt from scratch; --prev is not allowed with --local-only")
+	}
+	srcs, err := sources(*names, *seedFile, pol.PublishablePlatforms(), *localOnly)
 	if err != nil {
 		return err
 	}
@@ -120,13 +167,24 @@ func cmdBuild(ctx context.Context, args []string) error {
 		}
 		logf("previous release: sequence %d, %d programs", prev.Sequence, len(prev.Programs))
 	}
+	var removed []string
+	if !*localOnly {
+		prev, removed = pol.PrunePrev(prev)
+	}
 	client := fetch.New(fetch.Options{UserAgent: fetch.UserAgent(version), CacheDir: *cache, Timeout: 20 * time.Second})
 	next, err := collect.Build(ctx, prev, srcs, client, collect.Options{Now: now, AllowMassChange: *mass, Log: logf})
 	if err != nil {
 		return err
 	}
+	if *localOnly {
+		logf("LOCAL-ONLY: the publish policy was not applied; this bundle is unsigned and must not be published")
+	} else {
+		full := len(next.Programs)
+		next = pol.Filter(next, removed)
+		logf("publish policy: %d of %d programs publishable", len(next.Programs), full)
+	}
 	snap, delta, _, err := bundle.Write(*out, prev, next, bundle.WriteOptions{Now: now,
-		Collector: bundle.Collector{Version: version, Commit: os.Getenv("GITHUB_SHA")}})
+		Collector: bundle.Collector{Version: version, Commit: os.Getenv("GITHUB_SHA"), LocalOnly: *localOnly}})
 	if err != nil {
 		return err
 	}

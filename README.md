@@ -15,27 +15,86 @@ active testing, and targets marked `inferred` are suggestions only.
 
 ## Sources
 
-| Source | Adapter | What it gives | Licence / terms | Status |
-|---|---|---|---|---|
-| [disclose.io diodb](https://github.com/disclose/diodb) `program-list.json` | `diodb` | ~2,400 programs: name, policy URL, contact, bounty yes/no, safe harbour, disclosure timeline, languages. No structured scope; the host of a program's own security.txt becomes an `inferred` target. | CC0-1.0 | supported |
-| [security.txt](https://www.rfc-editor.org/rfc/rfc9116) (RFC 9116) over a seed list | `securitytxt` | A domain whose `/.well-known/security.txt` has a `Contact` and a `Policy` is a self-hosted disclosure program; the domain is an `inferred` target, the file's SHA-256 is the terms hash. Expired files give a `paused` program. | files published for automated retrieval | supported |
-| Seed: [CISA dotgov-data](https://github.com/cisagov/dotgov-data) `current-federal.csv` | `securitytxt` seed | US federal .gov domains and their organisations (vulnerability disclosure policies under BOD 20-01). | CC0-1.0 | supported |
-| Seed: `seeds/securitytxt.txt` | `securitytxt` seed | Extra domains added by pull request. | — | supported |
+Every source has a **status**: *ingest* (the collector reads it) and
+*publish* (its records go into the signed public feed). Publishing is
+decided per original platform by the [publish policy](#publish-policy), not
+per source.
 
-Not collected, and why (pull requests that scrape these will be declined):
+| Source | Adapter | What it gives | Licence / terms | Ingest | Publish |
+|---|---|---|---|---|---|
+| [disclose.io diodb](https://github.com/disclose/diodb) `program-list.json` | `diodb` | ~2,400 programs: name, policy URL, contact, bounty yes/no, safe harbour, disclosure timeline, languages. No structured scope; the host of a program's own security.txt becomes an `inferred` target. | CC0-1.0 | yes | self-hosted programs only; programs hosted on a platform follow that platform's policy |
+| [security.txt](https://www.rfc-editor.org/rfc/rfc9116) (RFC 9116) over a seed list | `securitytxt` | A domain whose `/.well-known/security.txt` has a `Contact` and a `Policy` is a self-hosted disclosure program; the domain is an `inferred` target, the file's SHA-256 is the terms hash. Expired files give a `paused` program. | files published for automated retrieval | yes | yes (self-hosted) |
+| Seed: [CISA dotgov-data](https://github.com/cisagov/dotgov-data) `current-federal.csv` | `securitytxt` seed | US federal .gov domains and their organisations (vulnerability disclosure policies under BOD 20-01). | CC0-1.0 | yes | yes (self-hosted) |
+| Seed: `seeds/securitytxt.txt` | `securitytxt` seed | Extra domains added by pull request. | n/a | yes | yes (self-hosted) |
+| [bounty-targets-data](https://github.com/arkadiyt/bounty-targets-data) `data/*_data.json` | `bounty-targets` | Public program listings of HackerOne, Bugcrowd, Intigriti and YesWeHack with their published scope (targets marked `published_by_platform`). Read at one resolved commit; each record names the dataset, the commit, the original platform and the original program page. | repository MIT; the records stay subject to each platform's terms | with `--local-only` | **no**: every platform is `publish=false` until it gives written permission |
+| [public-bugbounty-programs](https://github.com/projectdiscovery/public-bugbounty-programs) `dist/data.json` | `pd-bounty` | A community-curated list of program pages and the domains each covers (domains are `inferred` targets). | MIT (list) | yes | self-hosted programs only; with `--local-only` also platform-hosted ones |
+
+Platforms and the reason each is not published (the machine-readable
+version is [`policy/platforms.json`](policy/platforms.json)):
+
+| Platform | Publish | Reason |
+|---|---|---|
+| self-hosted | yes | the policy page is the program owner's own |
+| HackerOne | no | general terms allow use only as permitted; no redistribution grant. Permission letter drafted. |
+| Bugcrowd | no | website terms forbid redistributing any portion of the website. Permission letter drafted. |
+| Intigriti | no | no redistribution grant; the official API needs an account token. Permission letter drafted. |
+| YesWeHack | no | legal notices forbid redistributing the platform's data. Permission letter drafted. |
+| Immunefi | no | terms forbid automated access without written consent. Permission letter drafted. |
+| HackenProof | no | no official machine-readable listing. Permission letter drafted. |
+| Federacy, Open Bug Bounty, huntr, WhiteHub, BugBase, Zerocopter, Hackrate | no | no redistribution grant found |
+| any platform not in the policy | no | unlisted means not published |
+
+The drafts to the platforms are in [`docs/outreach/`](docs/outreach/); nothing
+has been sent. A platform is switched to `publish: true` only after written
+permission, with the attribution text it asks for.
+
+Not collected at all (pull requests that scrape these will be declined):
 
 | Source | Reason |
 |---|---|
-| HackerOne, Intigriti | program APIs require an account token; the feed never logs in |
-| Bugcrowd, YesWeHack | website terms forbid redistributing their data |
-| Immunefi | terms of use forbid automated access to the website without written consent |
-| Open Bug Bounty | listing is behind bot protection |
-| HackenProof, WhiteHub, BugBase and other regional platforms | no official machine-readable listing |
-| third-party dumps of platform scopes | the data comes from platforms whose terms forbid redistribution |
+| Open Bug Bounty | listing is behind bot protection; the feed does not bypass it |
+| Platform websites and undocumented endpoints | the collector reads official files and public datasets, never a platform's site |
+| Account-token APIs | the feed never logs in |
 
-A source moves to "supported" when it offers an official machine-readable
+A source moves to "publish" when it offers an official machine-readable
 listing whose terms allow collection and redistribution (or gives written
 permission).
+
+### Publish policy
+
+`policy/platforms.json` lists every original platform with:
+
+```json
+"hackerone": {"publish": false, "attribution": "...", "takedown_contact": "security@openctem.io", "reason": "..."}
+```
+
+- `publish`: only `true` puts the platform's records in the signed feed. A
+  platform that is not listed is not published. `publish: true` requires an
+  `attribution` text; it is added to the source entry of the signed manifest
+  together with the takedown contact.
+- A signed build does not even fetch dataset platforms that are not
+  published, applies the policy to the finished snapshot (a record is
+  published only if both its platform and its original platform are), and
+  applies it to the previous release too: switching a platform to
+  `publish: false` removes its programs on the next run with a
+  `program_dropped` change. Tests assert that restricted platforms never
+  reach the signed output.
+- Removal requests: see [TAKEDOWN.md](TAKEDOWN.md).
+
+### Local-only bundle (self-hosters)
+
+```sh
+./programfeed build --local-only --out local-bundle --cache httpcache
+```
+
+`--local-only` ignores the publish policy and reads every source, including the
+platform datasets, and writes an **unsigned** bundle marked
+`collector.local_only` in its manifest. `programfeed sign` refuses such a
+bundle, so the project's signing key never signs unfiltered data. It is meant
+for an organisation that points its **own** OpenCTEM platform at the bundle
+for its own use: you are responsible for the terms of the platforms whose data
+it contains, and the bundle must not be redistributed. A local bundle is
+rebuilt from scratch every time (`--prev` is refused).
 
 ### How the collector behaves on the network
 
@@ -95,8 +154,10 @@ Key rules:
 - Scope entries are typed (`domain`, `wildcard`, `ip`, `cidr`, `url`,
   `mobile_app`, `source_repo`, `other`), canonical, sorted and deduplicated;
   out of scope wins over in scope.
-- `confidence`: `published` (the program's own scope) or `inferred` (derived
-  by the collector). `scope_published` says whether the source carries the
+- `confidence`: `published` (the program's own scope), `published_by_platform`
+  (scope the hosting platform published, read through a public dataset; the
+  record's `provenance` names the dataset, commit, original platform and
+  original program page) or `inferred` (derived by the collector). `scope_published` says whether the source carries the
   program's own structured scope at all.
 - `terms.sha256` is the SHA-256 of the exact terms document the collector
   read, when it read one.
@@ -134,13 +195,14 @@ go test ./...                           # recorded fixtures, no network
 go build -o programfeed ./cmd/programfeed
 ./programfeed build --out out --cache httpcache                     # every source
 ./programfeed build --out out --sources diodb                       # one source
+./programfeed build --out out --policy my-policy.json               # your own publish policy
 ```
 
 A key is needed only to sign; see `keys/README.md`.
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for the trust model and how to report a
+Removal requests: [TAKEDOWN.md](TAKEDOWN.md). See [SECURITY.md](SECURITY.md) for the trust model and how to report a
 problem. Adding a source: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence

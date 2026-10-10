@@ -93,6 +93,10 @@ type Stats struct {
 type Collector struct {
 	Version string `json:"version"`
 	Commit  string `json:"commit"`
+	// LocalOnly marks a bundle built without the publish policy (it may
+	// hold records of platforms that do not allow redistribution). It is
+	// never signed and never published.
+	LocalOnly bool `json:"local_only,omitempty"`
 }
 
 // Manifest is the signed description of a snapshot or a delta.
@@ -362,6 +366,14 @@ func writeJSON(path string, v any) error {
 // envelopes signed by priv, and copies the key set next to them. The
 // signing key must be listed in the key set.
 func Sign(dir string, priv ed25519.PrivateKey, keyset []byte, pinnedRoot string, now time.Time) error {
+	if raw, err := os.ReadFile(filepath.Join(dir, "snapshot.manifest.json")); err == nil {
+		var m struct {
+			Collector Collector `json:"collector"`
+		}
+		if json.Unmarshal(raw, &m) == nil && m.Collector.LocalOnly {
+			return errors.New("refusing to sign a local-only bundle: it was built without the publish policy")
+		}
+	}
 	ks, err := dsse.VerifyKeySet(keyset, pinnedRoot, 0, now)
 	if err != nil {
 		return err

@@ -214,3 +214,26 @@ func TestChangeValidate(t *testing.T) {
 		}
 	}
 }
+
+func TestDatasetProvenance(t *testing.T) {
+	ok := Provenance{Dataset: "o/r", DatasetCommit: strings.Repeat("a", 40), OriginalPlatform: "hackerone", OriginalURL: "https://hackerone.com/x"}
+	if err := ok.validateDataset(); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Provenance{}).validateDataset(); err != nil {
+		t.Fatal(err)
+	}
+	for name, mut := range map[string]func(*Provenance){
+		"commit":   func(p *Provenance) { p.DatasetCommit = "main" },
+		"dataset":  func(p *Provenance) { p.Dataset = "o/r/extra" },
+		"platform": func(p *Provenance) { p.OriginalPlatform = "" },
+		"url":      func(p *Provenance) { p.OriginalURL = "javascript:alert(1)" },
+		"partial":  func(p *Provenance) { *p = Provenance{Dataset: "o/r"} },
+	} {
+		p := ok
+		mut(&p)
+		if p.validateDataset() == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}
