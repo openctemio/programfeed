@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -274,4 +275,56 @@ func (l *limited) Read(p []byte) (int, error) {
 	n, err := l.r.Read(p)
 	l.left -= int64(n)
 	return n, err
+}
+
+// ReadLocal reads the previous UNSIGNED local-only bundle in dir (written by
+// a --local-only build) so the next local build can continue its sequence.
+// It checks schema, tag, file sizes and hashes and every record, and refuses
+// anything that is not a local-only bundle (a signed release has DSSE
+// envelopes in place of the plain pointer and manifest).
+func ReadLocal(dir string) (*Snapshot, error) {
+	var l Latest
+	raw, err := readCapped(filepath.Join(dir, "latest.json"), 1<<20)
+	if err != nil {
+		return nil, err
+	}
+	if json.Unmarshal(raw, &l) != nil || l.Schema != LatestSchema {
+		return nil, errors.New("not an unsigned local-only bundle (signed releases cannot seed a local build)")
+	}
+	if l.Tag != Tag(l.Sequence) || l.Snapshot != fmt.Sprintf(ManifestFile, KindSnapshot) {
+		return nil, fmt.Errorf("latest: tag %q or snapshot %q does not match sequence %d", l.Tag, l.Snapshot, l.Sequence)
+	}
+	raw, err = readCapped(filepath.Join(dir, "snapshot.manifest.json"), 1<<20)
+	if err != nil {
+		return nil, err
+	}
+	var m Manifest
+	if json.Unmarshal(raw, &m) != nil || m.Schema != ManifestSchema || m.Kind != KindSnapshot {
+		return nil, errors.New("snapshot manifest: not an unsigned manifest")
+	}
+	if !m.Collector.LocalOnly {
+		return nil, errors.New("previous bundle is not local-only; a local build continues only a local-only bundle")
+	}
+	if m.Sequence != l.Sequence || len(m.Files) != len(recordFiles) {
+		return nil, errors.New("snapshot manifest does not match the pointer")
+	}
+	for i, f := range m.Files {
+		if f.Name != FileName(KindSnapshot, recordFiles[i]) {
+			return nil, fmt.Errorf("unexpected file %q", f.Name)
+		}
+		if err := checkFile(filepath.Join(dir, f.Name), f); err != nil {
+			return nil, err
+		}
+	}
+	return ReadRecords(dir, m)
+}
+
+// IsLocalOnly reports whether dir holds an unsigned local-only bundle.
+func IsLocalOnly(dir string) bool {
+	raw, err := os.ReadFile(filepath.Join(dir, "snapshot.manifest.json"))
+	if err != nil {
+		return false
+	}
+	var m Manifest
+	return json.Unmarshal(raw, &m) == nil && m.Collector.LocalOnly
 }
