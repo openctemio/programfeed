@@ -73,7 +73,7 @@ var platformHosts = map[string]string{
 
 // Collect implements Source.
 func (d DioDB) Collect(ctx context.Context, c *fetch.Client) (*Result, error) {
-	resp, err := c.Get(ctx, d.url(), maxDioDBBytes)
+	resp, err := c.Get(fetch.WithDeadline(ctx, datasetDeadline), d.url(), maxDioDBBytes)
 	if err != nil {
 		return nil, err
 	}

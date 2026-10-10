@@ -152,3 +152,51 @@ func TestRedirectEverythingTerminates(t *testing.T) {
 		t.Fatalf("%v %+v", err, r)
 	}
 }
+
+func slowServer(chunks int, gap time.Duration, stallAfter int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/robots.txt" {
+			http.NotFound(w, r)
+			return
+		}
+		fl := w.(http.Flusher)
+		for i := 0; i < chunks; i++ {
+			if stallAfter >= 0 && i == stallAfter {
+				select {
+				case <-r.Context().Done():
+				case <-time.After(5 * time.Second):
+				}
+				return
+			}
+			_, _ = w.Write([]byte(strings.Repeat("x", 1024)))
+			fl.Flush()
+			time.Sleep(gap)
+		}
+	}))
+}
+
+func TestSlowButSteadyBodyPasses(t *testing.T) {
+	srv := slowServer(20, 25*time.Millisecond, -1) // ~500ms total, over Timeout
+	defer srv.Close()
+	c := New(Options{UserAgent: "t", MinInterval: time.Millisecond, AllowPrivate: true,
+		Timeout: 200 * time.Millisecond, IdleTimeout: 300 * time.Millisecond})
+	if _, err := c.Get(context.Background(), srv.URL+"/big", 1<<20); err == nil {
+		t.Fatal("the default deadline must still bound the request")
+	}
+	resp, err := c.Get(WithDeadline(context.Background(), 5*time.Second), srv.URL+"/big", 1<<20)
+	if err != nil || len(resp.Body) != 20*1024 {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestStalledBodyFails(t *testing.T) {
+	srv := slowServer(20, time.Millisecond, 3)
+	defer srv.Close()
+	c := New(Options{UserAgent: "t", MinInterval: time.Millisecond, AllowPrivate: true,
+		Timeout: time.Second, IdleTimeout: 150 * time.Millisecond})
+	start := time.Now()
+	_, err := c.Get(WithDeadline(context.Background(), time.Minute), srv.URL+"/big", 1<<20)
+	if err == nil || time.Since(start) > 3*time.Second {
+		t.Fatalf("a stall must fail fast: err=%v after %v", err, time.Since(start))
+	}
+}
