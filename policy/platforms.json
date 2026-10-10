@@ -1,0 +1,75 @@
+{
+  "takedown_contact": "security@openctem.io",
+  "platforms": {
+    "self-hosted": {
+      "publish": true,
+      "attribution": "Programs that publish their own policy or security.txt.",
+      "reason": "The policy page is the program owner own page; the feed links to it and records facts about it."
+    },
+    "hackerone": {
+      "publish": false,
+      "attribution": "Program data from HackerOne public program pages.",
+      "reason": "General Terms allow use only in a permitted manner and no redistribution grant exists. Needs written permission."
+    },
+    "bugcrowd": {
+      "publish": false,
+      "attribution": "Program data from Bugcrowd public program pages.",
+      "reason": "Website terms forbid copying and redistribution of any portion of the website. Needs written permission."
+    },
+    "intigriti": {
+      "publish": false,
+      "attribution": "Program data from Intigriti public program pages.",
+      "reason": "No redistribution grant found; the official API needs an account token. Needs written permission."
+    },
+    "yeswehack": {
+      "publish": false,
+      "attribution": "Program data from YesWeHack public program pages.",
+      "reason": "Legal notices forbid redistributing the platform data. Needs written permission."
+    },
+    "immunefi": {
+      "publish": false,
+      "attribution": "Program data from Immunefi public program pages.",
+      "reason": "Terms of use forbid automated access without written consent. Needs written permission."
+    },
+    "hackenproof": {
+      "publish": false,
+      "attribution": "Program data from HackenProof public program pages.",
+      "reason": "No official machine-readable listing or redistribution grant. Needs written permission."
+    },
+    "federacy": {
+      "publish": false,
+      "attribution": "Program data from Federacy public program pages.",
+      "reason": "No redistribution grant found."
+    },
+    "openbugbounty": {
+      "publish": false,
+      "attribution": "Program data from Open Bug Bounty.",
+      "reason": "Listing is behind bot protection; no redistribution grant found."
+    },
+    "huntr": {
+      "publish": false,
+      "attribution": "Program data from huntr.",
+      "reason": "No redistribution grant found."
+    },
+    "whitehub": {
+      "publish": false,
+      "attribution": "Program data from WhiteHub.",
+      "reason": "No official listing or redistribution grant found."
+    },
+    "bugbase": {
+      "publish": false,
+      "attribution": "Program data from BugBase.",
+      "reason": "No official listing or redistribution grant found."
+    },
+    "zerocopter": {
+      "publish": false,
+      "attribution": "Program data from Zerocopter.",
+      "reason": "No redistribution grant found."
+    },
+    "hackrate": {
+      "publish": false,
+      "attribution": "Program data from Hackrate.",
+      "reason": "No redistribution grant found."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+[
+{"id":"initrode","name":"Initrode","public":true,"disabled":false,"managed":null,"min_bounty":50,"max_bounty":5000,"targets":{
+ "in_scope":[
+  {"target":"*.initrode.com","type":"wildcard"},
+  {"target":"https://cockpit.initrode.com/","type":"web-application"},
+  {"target":"Initrode Android","type":"mobile-application-android"},
+  {"target":"admin.internal","type":"web-application"}
+ ],
+ "out_of_scope":[{"target":"Any social engineering","type":"other"}]}},
+{"id":"closed-one","name":"Closed one","public":true,"disabled":true,"max_bounty":0,"targets":{"in_scope":[],"out_of_scope":[]}},
+{"id":"private-one","name":"Private","public":false,"max_bounty":10,"targets":{"in_scope":[],"out_of_scope":[]}}
+]

@@ -1,0 +1,138 @@
+[
+  {
+    "program_name": ".nz Registry",
+    "policy_url": "https://registry.internetnz.nz/about/vulnerability-disclosure-policy/",
+    "launch_date": "",
+    "offers_bounty": "no",
+    "offers_swag": false,
+    "hall_of_fame": "",
+    "safe_harbor": "partial",
+    "public_disclosure": "",
+    "pgp_key": "",
+    "hiring": "",
+    "securitytxt_url": "",
+    "preferred_languages": "",
+    "policy_url_status": "alive",
+    "contact_email": "security@internetnz.net.nz"
+  },
+  {
+    "program_name": "Ashby",
+    "policy_url": "https://www.ashbyhq.com/resources/vulnerability-disclosure",
+    "contact_email": "security@ashbyhq.com",
+    "offers_bounty": "no",
+    "offers_swag": false,
+    "pgp_key": "",
+    "hall_of_fame": "",
+    "hiring": "",
+    "launch_date": "",
+    "policy_url_status": "alive",
+    "preferred_languages": "",
+    "public_disclosure": "",
+    "safe_harbor": "",
+    "securitytxt_url": ""
+  },
+  {
+    "program_name": "Firebase",
+    "policy_url": "https://g.co/vrp",
+    "contact_url": "https://g.co/vulnz",
+    "launch_date": "",
+    "offers_bounty": "no",
+    "offers_swag": true,
+    "hall_of_fame": "",
+    "safe_harbor": "none",
+    "public_disclosure": "",
+    "pgp_key": "",
+    "hiring": "",
+    "securitytxt_url": "",
+    "preferred_languages": "",
+    "policy_url_status": "alive"
+  },
+  {
+    "program_name": "YouTube",
+    "policy_url": "https://g.co/vrp",
+    "contact_url": "https://g.co/vulnz",
+    "launch_date": "",
+    "offers_bounty": "yes",
+    "offers_swag": "",
+    "hall_of_fame": "",
+    "safe_harbor": "partial",
+    "public_disclosure": "",
+    "pgp_key": "",
+    "hiring": "",
+    "securitytxt_url": "",
+    "preferred_languages": "",
+    "policy_url_status": "alive"
+  },
+  {
+    "program_name": "Ada Health",
+    "policy_url": "https://ada.com/security-vulnerability-disclosure-policy/",
+    "contact_url": "https://ada.com/security-vulnerability-disclosure-policy/",
+    "launch_date": "",
+    "offers_bounty": "no",
+    "offers_swag": false,
+    "hall_of_fame": "",
+    "safe_harbor": "partial",
+    "public_disclosure": "",
+    "pgp_key": "https://ada.com/pgp-key.txt",
+    "hiring": "https:/ada.com/careers/",
+    "securitytxt_url": "https://ada.com/.well-known/security.txt",
+    "preferred_languages": "en, de",
+    "policy_url_status": "alive",
+    "contact_email": "security@ada.com"
+  },
+  {
+    "program_name": "",
+    "policy_url": "https://nameless.org/security"
+  },
+  {
+    "program_name": "Script Policy",
+    "policy_url": "javascript:alert(1)"
+  },
+  {
+    "program_name": "No Policy"
+  },
+  {
+    "program_name": "Platform Hosted",
+    "policy_url": "https://hackerone.com/platform-hosted",
+    "securitytxt_url": "https://hackerone.com/.well-known/security.txt",
+    "offers_bounty": true,
+    "safe_harbor": "full"
+  },
+  {
+    "program_name": "Public Suffix Txt",
+    "policy_url": "https://blog.github.io/policy",
+    "securitytxt_url": "https://github.io/.well-known/security.txt"
+  },
+  {
+    "program_name": "Odd Path Txt",
+    "policy_url": "https://oddpath.org/policy",
+    "securitytxt_url": "https://oddpath.org/files/security.txt"
+  },
+  {
+    "program_name": "Dead Link",
+    "policy_url": "https://dead.org/policy",
+    "policy_url_status": "dead",
+    "offers_bounty": "partial",
+    "contact_email": "not an email",
+    "contact_url": "javascript:x",
+    "disclosure_timeline_days": "90",
+    "preferred_languages": "en, de ,,"
+  },
+  {
+    "program_name": "Duplicate",
+    "policy_url": "https://dup-one.org/policy"
+  },
+  {
+    "program_name": "duplicate!",
+    "policy_url": "https://dup-two.org/policy"
+  },
+  {
+    "program_name": "Bell\u0007Name",
+    "policy_url": "https://bell.org/policy"
+  },
+  "not an object",
+  {
+    "program_name": 42,
+    "policy_url": "https://number.org/policy"
+  }
+]
