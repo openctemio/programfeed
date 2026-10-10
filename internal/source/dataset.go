@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/openctemio/programfeed/internal/fetch"
 	"github.com/openctemio/programfeed/internal/model"
@@ -28,7 +29,10 @@ const (
 	githubAPI = "https://api.github.com"
 	githubRaw = "https://raw.githubusercontent.com"
 
-	maxDatasetBytes   = 32 << 20
+	maxDatasetBytes = 32 << 20
+	// datasetDeadline bounds one large dataset download (the idle-read guard
+	// still fails a stalled one early).
+	datasetDeadline   = 5 * time.Minute
 	maxDatasetRecords = 20000
 	maxCommitListSize = 1 << 20
 )

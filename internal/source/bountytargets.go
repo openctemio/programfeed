@@ -108,7 +108,7 @@ func (b BountyTargets) Collect(ctx context.Context, c *fetch.Client) (*Result, e
 			continue
 		}
 		fileURL := b.Dataset.rawURL(commit, "data/"+plat.file)
-		resp, err := c.Get(ctx, fileURL, maxDatasetBytes)
+		resp, err := c.Get(fetch.WithDeadline(ctx, datasetDeadline), fileURL, maxDatasetBytes)
 		if err != nil {
 			return nil, err
 		}

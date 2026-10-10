@@ -272,3 +272,42 @@ func resignJSON(t *testing.T, dir, file, payloadType string, priv ed25519.Privat
 	out, _ := dsse.Sign(priv, payloadType, payload)
 	_ = os.WriteFile(filepath.Join(dir, file), out, 0o644)
 }
+
+func TestReadLocalContinuesSequence(t *testing.T) {
+	dir := t.TempDir()
+	if _, _, _, err := Write(dir, nil, snapshot(1, "b.openctem.io"), WriteOptions{Now: time.Now(), Collector: Collector{LocalOnly: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if !IsLocalOnly(dir) {
+		t.Fatal("IsLocalOnly")
+	}
+	prev, err := ReadLocal(dir)
+	if err != nil || prev.Sequence != 1 || len(prev.Programs) != 2 {
+		t.Fatalf("ReadLocal: %v %+v", err, prev)
+	}
+	// A tampered record file is refused.
+	if err := os.WriteFile(filepath.Join(dir, FileName(KindSnapshot, recordFiles[0])), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadLocal(dir); err == nil {
+		t.Fatal("tampered local bundle accepted")
+	}
+}
+
+func TestReadLocalRefusesSignedAndNonLocal(t *testing.T) {
+	k := newKeys(t)
+	signed := build(t, k, nil, snapshot(1, "b.openctem.io"))
+	if _, err := ReadLocal(signed); err == nil {
+		t.Fatal("signed release accepted as a local prev")
+	}
+	if IsLocalOnly(signed) {
+		t.Fatal("signed release reported local-only")
+	}
+	plain := t.TempDir()
+	if _, _, _, err := Write(plain, nil, snapshot(1, "b.openctem.io"), WriteOptions{Now: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ReadLocal(plain); err == nil {
+		t.Fatal("non-local unsigned bundle accepted")
+	}
+}

@@ -148,8 +148,8 @@ func cmdBuild(ctx context.Context, args []string) error {
 			return fmt.Errorf("policy: %w", err)
 		}
 	}
-	if *localOnly && *prevDir != "" {
-		return errors.New("build: a local-only bundle is rebuilt from scratch; --prev is not allowed with --local-only")
+	if !*localOnly && *prevDir != "" && bundle.IsLocalOnly(*prevDir) {
+		return errors.New("build: --prev is a local-only bundle; a publishable build needs a signed release")
 	}
 	srcs, err := sources(*names, *seedFile, pol.PublishablePlatforms(), *localOnly)
 	if err != nil {
@@ -157,7 +157,15 @@ func cmdBuild(ctx context.Context, args []string) error {
 	}
 	now := time.Now().UTC()
 	var prev *bundle.Snapshot
-	if *prevDir != "" {
+	if *prevDir != "" && *localOnly {
+		// Continue the previous local bundle's sequence (snapshot-only,
+		// unsigned): the platform importer refuses non-increasing sequences.
+		var err error
+		if prev, err = bundle.ReadLocal(*prevDir); err != nil {
+			return fmt.Errorf("previous local bundle: %w", err)
+		}
+		logf("previous local bundle: sequence %d, %d programs", prev.Sequence, len(prev.Programs))
+	} else if *prevDir != "" {
 		v, err := bundle.VerifyDir(*prevDir, bundle.VerifyOptions{PinnedRoot: *root, Now: now, AllowExpired: true, SkipRecordChk: true})
 		if err != nil {
 			return fmt.Errorf("previous release: %w", err)
@@ -183,7 +191,11 @@ func cmdBuild(ctx context.Context, args []string) error {
 		next = pol.Filter(next, removed)
 		logf("publish policy: %d of %d programs publishable", len(next.Programs), full)
 	}
-	snap, delta, _, err := bundle.Write(*out, prev, next, bundle.WriteOptions{Now: now,
+	writePrev := prev
+	if *localOnly {
+		writePrev = nil // snapshot-only: no delta is written for a local bundle
+	}
+	snap, delta, _, err := bundle.Write(*out, writePrev, next, bundle.WriteOptions{Now: now,
 		Collector: bundle.Collector{Version: version, Commit: os.Getenv("GITHUB_SHA"), LocalOnly: *localOnly}})
 	if err != nil {
 		return err
