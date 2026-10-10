@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/openctemio/programfeed/schema/change.schema.json",
+  "title": "Change",
+  "description": "One entry of a run's change log: one line of changes.jsonl.gz. Entries are sorted by program, then kind, then scope and target.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sequence", "program", "kind"],
+  "properties": {
+    "sequence": {"type": "integer", "minimum": 1, "description": "The bundle sequence that made the change."},
+    "program": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}:[a-z0-9][a-z0-9._-]{0,127}$"},
+    "kind": {"enum": ["program_added", "program_reopened", "status_changed", "program_modified", "rules_changed", "terms_changed",
+      "target_added", "target_modified", "target_removed", "program_closed", "program_dropped"],
+      "description": "program_dropped: the program is no longer in the feed (closed for more than 180 days); every other kind names a program present in the same bundle."},
+    "scope": {"enum": ["in", "out"], "description": "Target changes only."},
+    "target": {"$ref": "program.schema.json#/$defs/target", "description": "Target changes only: the target after the change (before, for target_removed)."},
+    "fields": {"type": "array", "maxItems": 16, "items": {"type": "string"}, "description": "For program_modified, rules_changed, status_changed and target_modified: the JSON fields that changed."}
+  }
+}

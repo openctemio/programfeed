@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/openctemio/programfeed/schema/program.schema.json",
+  "title": "Program",
+  "description": "One public bug-bounty or vulnerability-disclosure program: one line of programs.jsonl.gz.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "platform", "name", "url", "type", "status", "offers_bounty", "scope_published",
+    "in_scope", "out_of_scope", "rejected", "rules", "terms", "contact", "provenance", "first_seen", "last_seen", "last_changed"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,31}:[a-z0-9][a-z0-9._-]{0,127}$",
+      "description": "<source>:<slug>. Stable; owned by exactly one source adapter."},
+    "source": {"type": "string", "description": "The adapter that produced the record (the id prefix)."},
+    "platform": {"type": "string", "maxLength": 64, "description": "Where the program is hosted: \"self-hosted\" or the name of the hosting platform."},
+    "name": {"type": "string", "minLength": 1, "maxLength": 200},
+    "url": {"type": "string", "format": "uri", "maxLength": 2048, "description": "The program's policy page (http or https)."},
+    "type": {"enum": ["bounty", "vdp"]},
+    "status": {"enum": ["open", "paused", "closed"],
+      "description": "closed: the source no longer lists the program (kept 180 days, then dropped). paused: listed but not currently accepting (dead policy link, expired security.txt)."},
+    "offers_bounty": {"type": "boolean", "description": "Always equal to type == bounty."},
+    "scope_published": {"type": "boolean", "description": "True when the source carries the program's own structured scope. When false, in_scope holds at most inferred suggestions."},
+    "in_scope": {"type": "array", "maxItems": 2000, "items": {"$ref": "#/$defs/target"}, "description": "Sorted by (type, value), no duplicates. Out of scope wins: a value listed in both appears only in out_of_scope."},
+    "out_of_scope": {"type": "array", "maxItems": 2000, "items": {"$ref": "#/$defs/target"}},
+    "rejected": {"type": "array", "maxItems": 2000, "items": {"$ref": "#/$defs/rejected"}, "description": "Targets the program listed that the feed's scope rules refused, with the reason."},
+    "rules": {"$ref": "#/$defs/rules"},
+    "terms": {"$ref": "#/$defs/terms"},
+    "contact": {"$ref": "#/$defs/contact"},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "first_seen": {"type": "string", "format": "date-time"},
+    "last_seen": {"type": "string", "format": "date-time", "description": "Last run in which the source listed the program."},
+    "last_changed": {"type": "string", "format": "date-time", "description": "Last run in which any content (not timestamps) changed."},
+    "closed_at": {"type": "string", "format": "date-time", "description": "Present exactly when status is closed."}
+  },
+  "$defs": {
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "value", "confidence"],
+      "properties": {
+        "type": {"enum": ["domain", "wildcard", "ip", "cidr", "url", "mobile_app", "source_repo", "other"]},
+        "value": {"type": "string", "maxLength": 512,
+          "description": "Canonical form: domain = lower-case A-label, not a public suffix, not a reserved name; wildcard = \"*.\" + such a domain; ip = public unicast address; cidr = masked public prefix of at least /16 (IPv4) or /48 (IPv6); url = http(s) without credentials or fragment, host checked as above."},
+        "confidence": {"enum": ["published", "inferred"],
+          "description": "published: the program's own scope. inferred: derived by the collector (for example the host serving the program's security.txt); a suggestion, never an authorisation to test."},
+        "eligible_for_bounty": {"type": "boolean"},
+        "max_severity": {"enum": ["none", "low", "medium", "high", "critical"]},
+        "notes": {"type": "string", "maxLength": 500}
+      }
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "type", "value", "reason"],
+      "properties": {
+        "scope": {"enum": ["in", "out"]},
+        "type": {"type": "string", "maxLength": 32},
+        "value": {"type": "string", "maxLength": 512},
+        "reason": {"type": "string", "minLength": 1, "maxLength": 200}
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["testing_restrictions", "required_headers", "safe_harbour", "languages"],
+      "properties": {
+        "summary": {"type": "string", "maxLength": 4000},
+        "testing_restrictions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "rate_limit": {"type": "string", "maxLength": 200},
+        "required_headers": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+        "safe_harbour": {"enum": ["full", "partial", "none", "unknown"]},
+        "disclosure_days": {"type": "integer", "minimum": 0, "maximum": 3650},
+        "languages": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 500}}
+      }
+    },
+    "terms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": {"type": "string", "format": "uri", "maxLength": 2048},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the exact bytes of the terms document the collector read at fetched_at. Absent when the collector did not read the terms."},
+        "fetched_at": {"type": "string", "format": "date-time", "description": "Present exactly when sha256 is."}
+      }
+    },
+    "contact": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "email": {"type": "string", "maxLength": 254},
+        "url": {"type": "string", "maxLength": 2048, "description": "http(s) or mailto."}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "source_url", "fetched_at"],
+      "properties": {
+        "source": {"type": "string"},
+        "source_url": {"type": "string", "format": "uri", "maxLength": 2048},
+        "fetched_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}
