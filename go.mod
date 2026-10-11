@@ -5,8 +5,7 @@ go 1.26.0
 toolchain go1.26.9
 
 require (
-	// Pseudo-version of sdk-go main (17ba39a, PR 233): replace with the first tagged release that contains pkg/transfer/bundle.
-	github.com/openctemio/sdk-go v0.18.1-0.20261010083220-17ba39a04836
+	github.com/openctemio/sdk-go/pkg/transfer v0.1.0
 	golang.org/x/net v0.60.0
 )
 
