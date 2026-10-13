@@ -13,6 +13,20 @@ what scope it publishes and how that changed**. It is not an authorisation to
 test anything: a subscriber reads and accepts a program's terms before any
 active testing, and targets marked `inferred` are suggestions only.
 
+## Using it with your platform
+
+Nothing is installed on your hosts: the platform downloads (or, air-gapped,
+reads) a release, verifies it against the root key id you pin
+(`PROGRAMFEED_ROOT_KEY_ID`) and imports it into the public program monitor. A
+self-hoster can also point the platform at a [local-only
+bundle](#local-only-bundle-self-hosters) (`PROGRAMFEED_LOCAL_BUNDLE_DIR`).
+Setup and how to check the import:
+[Vulnerability and program feeds](https://docs.openctem.io/operations/feeds/)
+on docs.openctem.io.
+
+No signed release is published yet: the first one follows the key ceremony
+in [`keys/README.md`](keys/README.md).
+
 ## Sources
 
 Every source has a **status**: *ingest* (the collector reads it) and
