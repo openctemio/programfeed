@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/openctemio/sdk-go/pkg/transfer"
-	sdkbundle "github.com/openctemio/sdk-go/pkg/transfer/bundle"
+	"github.com/openctemio/ctis/transfer"
+	sdkbundle "github.com/openctemio/ctis/transfer/bundle"
 
 	"github.com/openctemio/programfeed/internal/model"
 )
