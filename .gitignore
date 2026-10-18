@@ -3,3 +3,12 @@
 /prev/
 /httpcache/
 *.key
+
+# Secrets and runtime state: never committed
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+/data/
