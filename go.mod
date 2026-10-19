@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.26.9
 
 require (
-	github.com/openctemio/ctis/transfer v0.0.0-20261015010154-bec927219ecf
+	github.com/openctemio/ctis/transfer v0.1.0
 	golang.org/x/net v0.61.0
 )
 
