@@ -5,7 +5,7 @@ go 1.27.0
 toolchain go1.27.3
 
 require (
-	github.com/openctemio/contract/transfer v1.0.0
+	github.com/openctemio/contract/transfer v1.0.1
 	golang.org/x/net v0.62.0
 )
 
